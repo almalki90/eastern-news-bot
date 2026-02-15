@@ -11,8 +11,9 @@ import json
 import os
 import time
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict
+from dateutil import parser as date_parser
 
 # إعدادات البوت
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '8281406621:AAGpJOnC1Ua1I4t49h8kWea-7pND8zTSBhg')
@@ -187,6 +188,43 @@ def is_valuable_news(news_item: Dict) -> bool:
     return False
 
 
+def is_recent_news(news_item: Dict, max_days: int = 2) -> bool:
+    """
+    التحقق من أن الخبر حديث (خلال آخر يومين)
+    يستبعد الأخبار القديمة خاصة الوظائف وأخبار الطقس
+    """
+    published_date = news_item.get('published', '')
+    
+    if not published_date:
+        # إذا لم يكن هناك تاريخ، نقبل الخبر (قد يكون حديث)
+        return True
+    
+    try:
+        # محاولة تحويل التاريخ
+        news_date = date_parser.parse(published_date)
+        
+        # إزالة معلومات timezone للمقارنة
+        if news_date.tzinfo:
+            news_date = news_date.replace(tzinfo=None)
+        
+        # الحصول على التاريخ الحالي
+        now = datetime.now()
+        
+        # حساب الفرق بالأيام
+        age_days = (now - news_date).days
+        
+        # قبول الأخبار الحديثة فقط (خلال آخر يومين)
+        if age_days <= max_days:
+            return True
+        else:
+            print(f"   ⏰ تم استبعاد خبر قديم ({age_days} يوم): {news_item.get('title', '')[:50]}...")
+            return False
+            
+    except Exception as e:
+        # إذا فشل تحليل التاريخ، نقبل الخبر
+        return True
+
+
 def is_eastern_province_news(news_item: Dict) -> bool:
     """
     التحقق من أن الخبر يتعلق بالمنطقة الشرقية
@@ -286,29 +324,95 @@ def are_similar_news(title1: str, title2: str) -> bool:
 
 
 def format_news_message(news_item: Dict) -> str:
-    """تنسيق رسالة الخبر - نبذة قصيرة مع المصدر"""
+    """تنسيق رسالة الخبر بشكل احترافي"""
     title = clean_text(news_item['title'])
     link = news_item['link']
     source = news_item['source']
     summary = clean_text(news_item.get('summary', ''))
+    published = news_item.get('published', '')
+    
+    # تحديد نوع الخبر (أيقونة حسب المحتوى)
+    icon = "📰"
+    title_lower = title.lower()
+    summary_lower = summary.lower()
+    full_text = f"{title_lower} {summary_lower}"
+    
+    if any(word in full_text for word in ['وظيفة', 'وظائف', 'توظيف', 'تعيين']):
+        icon = "💼"
+    elif any(word in full_text for word in ['مشروع', 'مشاريع', 'بناء', 'إنشاء', 'تطوير']):
+        icon = "🏗️"
+    elif any(word in full_text for word in ['ترسية', 'ترسيات', 'مناقصة', 'عقد']):
+        icon = "📋"
+    elif any(word in full_text for word in ['استثمار', 'استثمارات', 'مليار', 'مليون']):
+        icon = "💰"
+    elif any(word in full_text for word in ['مدرسة', 'جامعة', 'تعليم', 'دراسي']):
+        icon = "🎓"
+    elif any(word in full_text for word in ['مستشفى', 'صحة', 'طبي', 'علاج']):
+        icon = "🏥"
+    elif any(word in full_text for word in ['طقس', 'أمطار', 'حرارة', 'ضباب', 'أرصاد']):
+        icon = "🌤️"
     
     # تقليص الملخص إذا كان طويلاً
-    if summary and len(summary) > 200:
-        summary = summary[:197] + '...'
+    if summary and len(summary) > 180:
+        summary = summary[:177] + '...'
     
-    # رسالة بسيطة وواضحة
-    message = f"📰 {title}\n\n"
+    # تنسيق احترافي (بدون Markdown bold لأنه يسبب مشاكل)
+    message = f"{icon} {title}\n"
+    message += "━" * 35 + "\n\n"
     
     if summary and summary != title:
-        message += f"{summary}\n\n"
+        message += f"💬 {summary}\n\n"
     
-    message += f"📌 {source}"
+    # إضافة التاريخ إذا كان متوفراً
+    if published:
+        try:
+            news_date = date_parser.parse(published)
+            time_ago = get_time_ago(news_date)
+            message += f"🕐 {time_ago}\n"
+        except:
+            pass
     
-    # إضافة رابط مختصر اختياري (معلق - يمكن تفعيله لاحقاً)
-    # short_domain = shorten_url(link)
-    # message += f" | 🔗 {short_domain}"
+    message += f"📌 {source}\n"
+    message += f"🔗 {link}"
     
     return message
+
+
+def get_time_ago(news_date: datetime) -> str:
+    """حساب الفرق الزمني بشكل مفهوم بالعربية"""
+    if news_date.tzinfo:
+        news_date = news_date.replace(tzinfo=None)
+    
+    now = datetime.now()
+    diff = now - news_date
+    
+    if diff.days > 0:
+        if diff.days == 1:
+            return "منذ يوم واحد"
+        elif diff.days == 2:
+            return "منذ يومين"
+        else:
+            return f"منذ {diff.days} أيام"
+    
+    hours = diff.seconds // 3600
+    if hours > 0:
+        if hours == 1:
+            return "منذ ساعة واحدة"
+        elif hours == 2:
+            return "منذ ساعتين"
+        else:
+            return f"منذ {hours} ساعات"
+    
+    minutes = diff.seconds // 60
+    if minutes > 0:
+        if minutes == 1:
+            return "منذ دقيقة واحدة"
+        elif minutes == 2:
+            return "منذ دقيقتين"
+        else:
+            return f"منذ {minutes} دقيقة"
+    
+    return "منذ لحظات"
 
 
 def send_telegram_message(chat_id: int, message: str, retry_count: int = 3) -> bool:
@@ -398,10 +502,16 @@ def main():
     # استبعاد الأخبار البروتوكولية والتركيز على الأخبار القيّمة
     valuable_news = []
     protocol_count = 0
+    old_news_count = 0
     for news in eastern_news:
         # استبعاد الأخبار البروتوكولية
         if is_protocol_news(news):
             protocol_count += 1
+            continue
+        
+        # استبعاد الأخبار القديمة (أكثر من يومين)
+        if not is_recent_news(news, max_days=2):
+            old_news_count += 1
             continue
         
         # قبول الأخبار القيّمة فقط
@@ -409,6 +519,7 @@ def main():
             valuable_news.append(news)
     
     print(f"🚫 تم استبعاد {protocol_count} خبر بروتوكولي")
+    print(f"⏰ تم استبعاد {old_news_count} خبر قديم (أكثر من يومين)")
     print(f"✅ أخبار قيّمة (وظائف، مشاريع، ترسيات...): {len(valuable_news)}")
     
     # استخدام الأخبار القيّمة بدلاً من كل أخبار المنطقة
