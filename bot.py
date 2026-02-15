@@ -165,38 +165,82 @@ def fetch_rss_news(feed_url: str, feed_name: str, max_items: int = 20) -> List[D
         return []
 
 
-def escape_markdown(text: str) -> str:
-    """
-    تنظيف النص من الأحرف الخاصة التي تسبب مشاكل في Markdown
-    """
-    # إزالة أحرف Markdown الخاصة
-    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in special_chars:
-        text = text.replace(char, '')
+def clean_text(text: str) -> str:
+    """تنظيف النص من HTML والأحرف الزائدة"""
+    if not text:
+        return ""
+    
+    # إزالة HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # إزالة مسافات زائدة ومحارف خاصة
+    text = re.sub(r'\s+', ' ', text)
+    text = text.strip()
+    
     return text
 
 
+def shorten_url(url: str) -> str:
+    """اختصار الرابط لعرض أفضل"""
+    try:
+        # استخراج اسم الموقع فقط
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        domain = parsed.netloc.replace('www.', '')
+        return domain
+    except:
+        return url[:30] + '...'
+
+
+def are_similar_news(title1: str, title2: str) -> bool:
+    """
+    التحقق من تشابه الأخبار لمنع التكرار
+    يقارن أول 50 حرف من العنوانين
+    """
+    # تنظيف العناوين
+    t1 = clean_text(title1).lower()[:50]
+    t2 = clean_text(title2).lower()[:50]
+    
+    # حساب نسبة التشابه
+    if len(t1) < 10 or len(t2) < 10:
+        return False
+    
+    # إذا كان أحدهما يحتوي على الآخر
+    if t1 in t2 or t2 in t1:
+        return True
+    
+    # حساب الكلمات المشتركة
+    words1 = set(t1.split())
+    words2 = set(t2.split())
+    common = words1.intersection(words2)
+    
+    # إذا كان 70% من الكلمات مشتركة
+    similarity = len(common) / max(len(words1), len(words2))
+    return similarity > 0.7
+
+
 def format_news_message(news_item: Dict) -> str:
-    """تنسيق رسالة الخبر"""
-    title = escape_markdown(news_item['title'])
+    """تنسيق رسالة الخبر - نبذة قصيرة مع المصدر"""
+    title = clean_text(news_item['title'])
     link = news_item['link']
     source = news_item['source']
-    summary = news_item.get('summary', '')
-    
-    # تنظيف الملخص من HTML tags
-    if summary:
-        summary = re.sub(r'<[^>]+>', '', summary)
-        summary = escape_markdown(summary)
+    summary = clean_text(news_item.get('summary', ''))
     
     # تقليص الملخص إذا كان طويلاً
-    if summary and len(summary) > 250:
-        summary = summary[:247] + '...'
+    if summary and len(summary) > 200:
+        summary = summary[:197] + '...'
     
+    # رسالة بسيطة وواضحة
     message = f"📰 {title}\n\n"
-    if summary:
+    
+    if summary and summary != title:
         message += f"{summary}\n\n"
-    message += f"🔗 الرابط: {link}\n"
-    message += f"📌 المصدر: {source}"
+    
+    message += f"📌 {source}"
+    
+    # إضافة رابط مختصر اختياري (معلق - يمكن تفعيله لاحقاً)
+    # short_domain = shorten_url(link)
+    # message += f" | 🔗 {short_domain}"
     
     return message
 
@@ -285,9 +329,23 @@ def main():
     
     print(f"🏙️  أخبار المنطقة الشرقية: {len(eastern_news)}")
     
+    # إزالة الأخبار المكررة
+    unique_news = []
+    for news in eastern_news:
+        is_duplicate = False
+        for existing in unique_news:
+            if are_similar_news(news['title'], existing['title']):
+                is_duplicate = True
+                break
+        
+        if not is_duplicate:
+            unique_news.append(news)
+    
+    print(f"🔄 بعد إزالة التكرار: {len(unique_news)}")
+    
     # فلترة الأخبار الجديدة فقط
     new_news = []
-    for news in eastern_news:
+    for news in unique_news:
         news_id = news['id']
         if news_id not in sent_news:
             new_news.append(news)
@@ -298,8 +356,8 @@ def main():
     
     print(f"🆕 أخبار جديدة: {len(new_news)}")
     
-    # تحديد عدد الأخبار للإرسال (حد أقصى 10 لتجنب الحظر)
-    max_news_to_send = 10
+    # تحديد عدد الأخبار للإرسال (حد أقصى 8 لتجنب الحظر)
+    max_news_to_send = 8
     if len(new_news) > max_news_to_send:
         print(f"⚠️  سيتم إرسال أول {max_news_to_send} خبر فقط (من {len(new_news)})")
         news_to_send = new_news[:max_news_to_send]
