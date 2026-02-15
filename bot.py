@@ -356,24 +356,24 @@ def format_news_message(news_item: Dict) -> str:
     if summary and len(summary) > 180:
         summary = summary[:177] + '...'
     
-    # تنسيق احترافي (بدون Markdown bold لأنه يسبب مشاكل)
-    message = f"{icon} {title}\n"
-    message += "━" * 35 + "\n\n"
+    # رسالة مختصرة: فقط العنوان + التاريخ + المصدر (بدون روابط)
+    message = f"{icon} {title}\n\n"
     
-    if summary and summary != title:
-        message += f"💬 {summary}\n\n"
-    
-    # إضافة التاريخ إذا كان متوفراً
+    # إضافة التاريخ
+    time_info = ""
     if published:
         try:
             news_date = date_parser.parse(published)
             time_ago = get_time_ago(news_date)
-            message += f"🕐 {time_ago}\n"
+            time_info = f"🕐 {time_ago}"
         except:
             pass
     
-    message += f"📌 {source}\n"
-    message += f"🔗 {link}"
+    # سطر واحد: التاريخ + المصدر
+    if time_info:
+        message += f"{time_info} • 📌 {source}"
+    else:
+        message += f"📌 {source}"
     
     return message
 
