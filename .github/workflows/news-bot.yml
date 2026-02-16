@@ -12,6 +12,10 @@ jobs:
   send-news:
     runs-on: ubuntu-latest
     
+    # إضافة صلاحيات للكتابة
+    permissions:
+      contents: write
+    
     steps:
       - name: 📥 Checkout الكود
         uses: actions/checkout@v4
