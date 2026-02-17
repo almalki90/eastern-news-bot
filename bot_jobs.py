@@ -18,6 +18,7 @@ TELEGRAM_API = f'https://api.telegram.org/bot{BOT_TOKEN}'
 SENT_NEWS_FILE = 'sent_jobs.json'
 
 JOBS_FEEDS = [
+    # Google News - وظائف عامة
     {
         'name': 'وظائف الشرقية',
         'url': 'https://news.google.com/rss/search?q=وظائف+OR+توظيف+OR+فرص+عمل+(الدمام+OR+الخبر+OR+الجبيل+OR+الأحساء+OR+الشرقية)+when:2d&hl=ar&gl=SA&ceid=SA:ar',
@@ -27,8 +28,29 @@ JOBS_FEEDS = [
         'url': 'https://news.google.com/rss/search?q=jobs+OR+hiring+OR+employment+(Dammam+OR+Khobar+OR+Dhahran+OR+Eastern)+when:2d&hl=en&gl=SA&ceid=SA:en',
     },
     {
-        'name': 'وظائف المنطقة الشرقية',
+        'name': 'إعلانات وظيفية',
         'url': 'https://news.google.com/rss/search?q=إعلان+وظيفي+OR+شواغر+(المنطقة+الشرقية+OR+الدمام+OR+الخبر)+when:2d&hl=ar&gl=SA&ceid=SA:ar',
+    },
+    # مصادر متخصصة
+    {
+        'name': 'وظائف أرامكو',
+        'url': 'https://news.google.com/rss/search?q=أرامكو+وظائف+(الدمام+OR+الظهران+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
+    },
+    {
+        'name': 'وظائف سابك',
+        'url': 'https://news.google.com/rss/search?q=سابك+OR+sabic+وظائف+(الجبيل+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
+    },
+    {
+        'name': 'وظائف حكومية',
+        'url': 'https://news.google.com/rss/search?q=وظائف+حكومية+OR+وزارة+(الدمام+OR+الخبر+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
+    },
+    {
+        'name': 'وظائف تعليمية',
+        'url': 'https://news.google.com/rss/search?q=وظائف+تعليمية+OR+معلمين+OR+جامعة+(الدمام+OR+الخبر+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
+    },
+    {
+        'name': 'وظائف صحية',
+        'url': 'https://news.google.com/rss/search?q=وظائف+صحية+OR+مستشفى+OR+تمريض+(الدمام+OR+الخبر+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
     }
 ]
 
