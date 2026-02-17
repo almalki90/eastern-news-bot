@@ -1,0 +1,38 @@
+name: 💼 بوت أخبار الوظائف
+
+on:
+  schedule:
+    - cron: '0 6,18 * * *'  # كل 12 ساعة: 06:00 و 18:00 UTC (09:00 ص و 09:00 م بتوقيت السعودية)
+  workflow_dispatch:
+
+jobs:
+  jobs-news:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt
+      
+      - name: 💼 Run Jobs Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python bot_jobs.py
+      
+      - name: 💾 Save Sent News
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "💼 تحديث: سجل أخبار الوظائف"
+          file_pattern: 'sent_jobs.json'
+          commit_user_name: 'Jobs Bot'
+          commit_user_email: 'jobs-bot@github-actions'

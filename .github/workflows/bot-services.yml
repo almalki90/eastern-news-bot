@@ -1,0 +1,38 @@
+name: 🏛️ بوت الخدمات والعقارات
+
+on:
+  schedule:
+    - cron: '0 9,21 * * *'  # كل 12 ساعة: 09:00 و 21:00 UTC (12:00 م و 12:00 ص بتوقيت السعودية)
+  workflow_dispatch:
+
+jobs:
+  services-news:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt
+      
+      - name: 🏛️ Run Services Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python bot_services.py
+      
+      - name: 💾 Save Sent News
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🏛️ تحديث: سجل أخبار الخدمات"
+          file_pattern: 'sent_services.json'
+          commit_user_name: 'Services Bot'
+          commit_user_email: 'services-bot@github-actions'

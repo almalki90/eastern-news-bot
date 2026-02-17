@@ -1,0 +1,38 @@
+name: 🌤️ بوت أخبار الطقس
+
+on:
+  schedule:
+    - cron: '0 0,12 * * *'  # كل 12 ساعة: 00:00 و 12:00 UTC (03:00 ص و 03:00 م بتوقيت السعودية)
+  workflow_dispatch:
+
+jobs:
+  weather-news:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt
+      
+      - name: 🌤️ Run Weather Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python bot_weather.py
+      
+      - name: 💾 Save Sent News
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🌤️ تحديث: سجل أخبار الطقس"
+          file_pattern: 'sent_weather.json'
+          commit_user_name: 'Weather Bot'
+          commit_user_email: 'weather-bot@github-actions'

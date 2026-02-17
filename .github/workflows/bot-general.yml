@@ -1,0 +1,38 @@
+name: 📰 بوت الأخبار العامة
+
+on:
+  schedule:
+    - cron: '0 3,15 * * *'  # كل 12 ساعة: 03:00 و 15:00 UTC (06:00 ص و 06:00 م بتوقيت السعودية)
+  workflow_dispatch:
+
+jobs:
+  general-news:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt
+      
+      - name: 📰 Run General News Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python bot_general.py
+      
+      - name: 💾 Save Sent News
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "📰 تحديث: سجل الأخبار العامة"
+          file_pattern: 'sent_general.json'
+          commit_user_name: 'General News Bot'
+          commit_user_email: 'general-bot@github-actions'
