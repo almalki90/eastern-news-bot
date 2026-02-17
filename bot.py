@@ -19,8 +19,8 @@ from dateutil import parser as date_parser
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '8281406621:AAGpJOnC1Ua1I4t49h8kWea-7pND8zTSBhg')
 TELEGRAM_API = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
-# مصادر RSS للأخبار السعودية المحلية
-RSS_FEEDS = [
+# مصادر RSS للأخبار العامة
+GENERAL_NEWS_FEEDS = [
     # Google News - أخبار المنطقة الشرقية (بحث مخصص)
     {
         'name': 'Google News - المنطقة الشرقية',
@@ -37,18 +37,6 @@ RSS_FEEDS = [
         'url': 'https://news.google.com/rss/search?q=الأحساء+OR+الجبيل+OR+حفر+الباطن+when:7d&hl=ar&gl=SA&ceid=SA:ar',
         'enabled': True
     },
-    # وظائف المنطقة الشرقية
-    {
-        'name': 'Google News - وظائف الشرقية',
-        'url': 'https://news.google.com/rss/search?q=وظائف+(الدمام+OR+الخبر+OR+الجبيل+OR+الأحساء)+when:7d&hl=ar&gl=SA&ceid=SA:ar',
-        'enabled': True
-    },
-    # طقس المنطقة الشرقية
-    {
-        'name': 'Google News - طقس الشرقية',
-        'url': 'https://news.google.com/rss/search?q=طقس+(الدمام+OR+الخبر+OR+المنطقة+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
-        'enabled': True
-    },
     # مصادر عربية عامة (للفلترة)
     {
         'name': 'عرب نيوز - السعودية',
@@ -58,6 +46,34 @@ RSS_FEEDS = [
     {
         'name': 'الشرق الأوسط',
         'url': 'https://aawsat.com/feed',
+        'enabled': True
+    }
+]
+
+# مصادر RSS للوظائف - مخصصة ومنفصلة
+JOBS_NEWS_FEEDS = [
+    {
+        'name': 'Google News - وظائف الشرقية',
+        'url': 'https://news.google.com/rss/search?q=وظائف+OR+توظيف+OR+فرص+عمل+(الدمام+OR+الخبر+OR+الجبيل+OR+الأحساء+OR+الشرقية)+when:3d&hl=ar&gl=SA&ceid=SA:ar',
+        'enabled': True
+    },
+    {
+        'name': 'Google News - وظائف Dammam',
+        'url': 'https://news.google.com/rss/search?q=jobs+hiring+employment+(Dammam+OR+Khobar+OR+Dhahran+OR+Eastern)+when:3d&hl=en&gl=SA&ceid=SA:en',
+        'enabled': True
+    }
+]
+
+# مصادر RSS للطقس - مخصصة ومنفصلة
+WEATHER_NEWS_FEEDS = [
+    {
+        'name': 'Google News - طقس الشرقية',
+        'url': 'https://news.google.com/rss/search?q=طقس+OR+حالة+الجو+OR+الأرصاد+(الدمام+OR+الخبر+OR+المنطقة+الشرقية)+when:1d&hl=ar&gl=SA&ceid=SA:ar',
+        'enabled': True
+    },
+    {
+        'name': 'Google News - طقس العرب',
+        'url': 'https://news.google.com/rss/search?q=site:arabiaweather.com+(الدمام+OR+الخبر+OR+الشرقية)+when:1d&hl=ar&gl=SA&ceid=SA:ar',
         'enabled': True
     }
 ]
@@ -202,6 +218,49 @@ def is_valuable_news(news_item: Dict) -> bool:
         if keyword in full_text:
             return True
     
+    return False
+
+
+def is_jobs_news(news_item: Dict) -> bool:
+    """
+    التحقق من أن الخبر متعلق بالوظائف
+    """
+    title = news_item.get('title', '').lower()
+    summary = news_item.get('summary', '').lower()
+    full_text = f"{title} {summary}"
+    
+    jobs_keywords = [
+        'وظيفة', 'وظائف', 'توظيف', 'تعيين', 'تعيينات', 'فرص عمل',
+        'مسابقة وظيفية', 'إعلان وظيفي', 'رواتب', 'مقابلة',
+        'تقديم طلب', 'سجل الآن', 'التقديم', 'شواغر',
+        'job', 'jobs', 'hiring', 'employment', 'career', 'vacancies'
+    ]
+    
+    for keyword in jobs_keywords:
+        if keyword in full_text:
+            return True
+    return False
+
+
+def is_weather_news(news_item: Dict) -> bool:
+    """
+    التحقق من أن الخبر متعلق بالطقس
+    """
+    title = news_item.get('title', '').lower()
+    summary = news_item.get('summary', '').lower()
+    full_text = f"{title} {summary}"
+    
+    weather_keywords = [
+        'طقس', 'أمطار', 'حرارة', 'درجات الحرارة', 'أرصاد', 'المركز الوطني للأرصاد',
+        'ضباب', 'غبار', 'رياح', 'أتربة', 'مثارة', 'عاصفة', 'رعدية',
+        'منخفض جوي', 'تقلبات جوية', 'موجة', 'الطقس اليوم', 'حالة الجو',
+        'سحب', 'ممطرة', 'باردة', 'حارة', 'رطوبة', 'إنذار', 'تحذير',
+        'weather', 'temperature', 'rain', 'forecast', 'storm', 'wind'
+    ]
+    
+    for keyword in weather_keywords:
+        if keyword in full_text:
+            return True
     return False
 
 
@@ -474,7 +533,7 @@ def send_telegram_message(chat_id: int, message: str, retry_count: int = 3) -> b
 
 
 def main():
-    """الدالة الرئيسية"""
+    """الدالة الرئيسية - فصل الأخبار إلى: طقس، وظائف، عامة"""
     print(f"\n🤖 بدء بوت أخبار المنطقة الشرقية - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
     
@@ -485,7 +544,6 @@ def main():
     chat_ids = get_bot_chats()
     
     # إضافة chat IDs يدوياً إذا لم يتم العثور عليها تلقائياً
-    # المجموعة التي أرسل فيها البوت سابقاً
     if not chat_ids:
         chat_ids = [-1003882183490]  # المجموعة الرئيسية
     
@@ -499,105 +557,151 @@ def main():
     
     print(f"📱 تم العثور على {len(chat_ids)} مجموعة/قناة")
     
-    # جلب الأخبار من كل المصادر
-    all_news = []
-    for feed in RSS_FEEDS:
-        if not feed.get('enabled', True):
-            continue
-        news_items = fetch_rss_news(feed['url'], feed['name'])
-        all_news.extend(news_items)
+    # 1️⃣ جلب أخبار الوظائف (منفصلة)
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("💼 جلب أخبار الوظائف...")
+    jobs_news = []
+    for feed in JOBS_NEWS_FEEDS:
+        if feed.get('enabled', True):
+            news_items = fetch_rss_news(feed['url'], feed['name'])
+            jobs_news.extend(news_items)
     
-    print(f"\n📊 إجمالي الأخبار: {len(all_news)}")
+    # فلترة أخبار الوظائف
+    jobs_eastern = [n for n in jobs_news if is_eastern_province_news(n) and is_jobs_news(n) and is_recent_news(n, max_days=2)]
+    jobs_unique = remove_duplicates(jobs_eastern)
+    print(f"💼 أخبار وظائف حديثة: {len(jobs_unique)}")
     
-    # فلترة الأخبار المتعلقة بالمنطقة الشرقية فقط
-    eastern_news = []
-    for news in all_news:
-        if is_eastern_province_news(news):
-            eastern_news.append(news)
+    # 2️⃣ جلب أخبار الطقس (منفصلة)
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("🌤️  جلب أخبار الطقس...")
+    weather_news = []
+    for feed in WEATHER_NEWS_FEEDS:
+        if feed.get('enabled', True):
+            news_items = fetch_rss_news(feed['url'], feed['name'])
+            weather_news.extend(news_items)
     
-    print(f"🏙️  أخبار المنطقة الشرقية: {len(eastern_news)}")
+    # فلترة أخبار الطقس
+    weather_eastern = [n for n in weather_news if is_eastern_province_news(n) and is_weather_news(n) and is_recent_news(n, max_days=1)]
+    weather_unique = remove_duplicates(weather_eastern)
+    print(f"🌤️  أخبار طقس حديثة: {len(weather_unique)}")
     
-    # استبعاد الأخبار البروتوكولية والتركيز على الأخبار القيّمة
-    valuable_news = []
+    # 3️⃣ جلب الأخبار العامة (مشاريع، ترسيات، استثمارات...)
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("📰 جلب الأخبار العامة...")
+    general_news = []
+    for feed in GENERAL_NEWS_FEEDS:
+        if feed.get('enabled', True):
+            news_items = fetch_rss_news(feed['url'], feed['name'])
+            general_news.extend(news_items)
+    
+    # فلترة الأخبار العامة (استبعاد البروتوكولية)
+    general_eastern = []
     protocol_count = 0
-    old_news_count = 0
-    for news in eastern_news:
-        # استبعاد الأخبار البروتوكولية
+    for news in general_news:
+        if not is_eastern_province_news(news):
+            continue
         if is_protocol_news(news):
             protocol_count += 1
             continue
-        
-        # استبعاد الأخبار القديمة (أكثر من يومين)
         if not is_recent_news(news, max_days=2):
-            old_news_count += 1
             continue
-        
-        # قبول الأخبار القيّمة فقط
+        # استبعاد أخبار الوظائف والطقس (لها قسم خاص)
+        if is_jobs_news(news) or is_weather_news(news):
+            continue
         if is_valuable_news(news):
-            valuable_news.append(news)
+            general_eastern.append(news)
     
+    general_unique = remove_duplicates(general_eastern)
     print(f"🚫 تم استبعاد {protocol_count} خبر بروتوكولي")
-    print(f"⏰ تم استبعاد {old_news_count} خبر قديم (أكثر من يومين)")
-    print(f"✅ أخبار قيّمة (وظائف، مشاريع، ترسيات...): {len(valuable_news)}")
+    print(f"📰 أخبار عامة حديثة: {len(general_unique)}")
     
-    # استخدام الأخبار القيّمة بدلاً من كل أخبار المنطقة
-    eastern_news = valuable_news
+    # 4️⃣ إرسال الأخبار بشكل منفصل
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("📤 إرسال الأخبار...")
     
-    # إزالة الأخبار المكررة
-    unique_news = []
-    for news in eastern_news:
-        is_duplicate = False
-        for existing in unique_news:
-            if are_similar_news(news['title'], existing['title']):
-                is_duplicate = True
-                break
-        
-        if not is_duplicate:
-            unique_news.append(news)
+    total_sent = 0
     
-    print(f"🔄 بعد إزالة التكرار: {len(unique_news)}")
-    
-    # فلترة الأخبار الجديدة فقط
-    new_news = []
-    for news in unique_news:
-        news_id = news['id']
-        if news_id not in sent_news:
-            new_news.append(news)
-            sent_news[news_id] = {
-                'title': news['title'],
-                'sent_at': datetime.now().isoformat()
-            }
-    
-    print(f"🆕 أخبار جديدة: {len(new_news)}")
-    
-    # تحديد عدد الأخبار للإرسال (حد أقصى 8 لتجنب الحظر)
-    max_news_to_send = 8
-    if len(new_news) > max_news_to_send:
-        print(f"⚠️  سيتم إرسال أول {max_news_to_send} خبر فقط (من {len(new_news)})")
-        news_to_send = new_news[:max_news_to_send]
-    else:
-        news_to_send = new_news
-    
-    # إرسال الأخبار الجديدة
-    sent_count = 0
-    for i, news in enumerate(news_to_send, 1):
-        message = format_news_message(news)
-        
-        for chat_id in chat_ids:
-            if send_telegram_message(chat_id, message):
-                sent_count += 1
-                print(f"✅ [{i}/{len(news_to_send)}] تم إرسال: {news['title'][:50]}...")
-            else:
-                print(f"❌ [{i}/{len(news_to_send)}] فشل إرسال: {news['title'][:50]}...")
+    # إرسال أخبار الطقس (رسالة جماعية واحدة)
+    if weather_unique:
+        weather_new = filter_new_news(weather_unique, sent_news)
+        if weather_new:
+            weather_message = "🌤️ *طقس المنطقة الشرقية*\n" + "━" * 30 + "\n\n"
+            for news in weather_new[:3]:  # أقصى 3 أخبار طقس
+                weather_message += f"• {news['title']}\n"
+                weather_message += f"  📌 {news['source']}\n\n"
+                mark_as_sent(news, sent_news)
             
-            # انتظار قصير بين كل رسالة لتجنب rate limiting
-            time.sleep(1)
+            for chat_id in chat_ids:
+                if send_telegram_message(chat_id, weather_message):
+                    total_sent += 1
+                    print(f"✅ تم إرسال أخبار الطقس ({len(weather_new)} أخبار)")
+            time.sleep(2)
+    
+    # إرسال أخبار الوظائف (رسالة جماعية واحدة)
+    if jobs_unique:
+        jobs_new = filter_new_news(jobs_unique, sent_news)
+        if jobs_new:
+            jobs_message = "💼 *وظائف المنطقة الشرقية*\n" + "━" * 30 + "\n\n"
+            for news in jobs_new[:5]:  # أقصى 5 وظائف
+                jobs_message += f"• {news['title']}\n"
+                jobs_message += f"  📌 {news['source']}\n\n"
+                mark_as_sent(news, sent_news)
+            
+            for chat_id in chat_ids:
+                if send_telegram_message(chat_id, jobs_message):
+                    total_sent += 1
+                    print(f"✅ تم إرسال أخبار الوظائف ({len(jobs_new)} وظائف)")
+            time.sleep(2)
+    
+    # إرسال الأخبار العامة (رسائل منفصلة مختصرة)
+    if general_unique:
+        general_new = filter_new_news(general_unique, sent_news)
+        if general_new:
+            for i, news in enumerate(general_new[:6], 1):  # أقصى 6 أخبار عامة
+                message = format_news_message(news)
+                for chat_id in chat_ids:
+                    if send_telegram_message(chat_id, message):
+                        total_sent += 1
+                        print(f"✅ [{i}/{min(len(general_new), 6)}] أخبار عامة: {news['title'][:50]}...")
+                    time.sleep(1)
+                mark_as_sent(news, sent_news)
     
     # حفظ قائمة الأخبار المرسلة
     save_sent_news(sent_news)
     
-    print(f"\n✨ تم إرسال {sent_count} رسالة بنجاح!")
+    print(f"\n✨ تم إرسال {total_sent} رسالة بنجاح!")
     print("=" * 60)
+
+
+def remove_duplicates(news_list: List[Dict]) -> List[Dict]:
+    """إزالة الأخبار المكررة"""
+    unique = []
+    for news in news_list:
+        is_duplicate = False
+        for existing in unique:
+            if are_similar_news(news['title'], existing['title']):
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            unique.append(news)
+    return unique
+
+
+def filter_new_news(news_list: List[Dict], sent_news: Dict) -> List[Dict]:
+    """فلترة الأخبار الجديدة فقط"""
+    new_news = []
+    for news in news_list:
+        if news['id'] not in sent_news:
+            new_news.append(news)
+    return new_news
+
+
+def mark_as_sent(news: Dict, sent_news: Dict):
+    """تسجيل الخبر كمُرسل"""
+    sent_news[news['id']] = {
+        'title': news['title'],
+        'sent_at': datetime.now().isoformat()
+    }
 
 
 if __name__ == '__main__':
