@@ -59,7 +59,25 @@ JOBS_FEEDS = [
     }
 ]
 
-EASTERN_KEYWORDS = ['المنطقة الشرقية', 'الشرقية', 'الدمام', 'dammam', 'الخبر', 'khobar', 'الظهران', 'dhahran', 'الجبيل', 'jubail', 'الأحساء', 'القطيف', 'حفر الباطن', 'eastern province']
+EASTERN_KEYWORDS = [
+    # المنطقة والمدن الرئيسية
+    'المنطقة الشرقية', 'الشرقية', 'eastern province', 'eastern region',
+    'الدمام', 'dammam', 'الخبر', 'khobar', 'al khobar', 'الظهران', 'dhahran',
+    'الجبيل', 'jubail', 'الأحساء', 'al ahsa', 'ahsa', 'hofuf',
+    'القطيف', 'qatif', 'al qatif', 'حفر الباطن', 'hafr al batin',
+    # أحياء ومعالم
+    'الراكة', 'الفيصلية', 'العزيزية', 'النزهة', 'الشاطئ',
+    'أرامكو', 'aramco', 'saudi aramco',
+    'سابك', 'sabic',
+    'مطار الملك فهد', 'king fahd airport',
+    'جامعة الدمام', 'جامعة الإمام عبدالرحمن', 'iau',
+    'جامعة الملك فهد', 'kfupm',
+    # محافظات
+    'رأس تنورة', 'ras tanura',
+    'النعيرية', 'الخفجي', 'khafji',
+    'بقيق', 'buqayq',
+    'الجبيل الصناعية', 'jubail industrial'
+]
 
 def load_sent():
     if os.path.exists(SENT_NEWS_FILE):
@@ -121,11 +139,30 @@ def main():
         all_news.extend(news)
         print(f"✅ {feed['name']}: {len(news)} خبر")
     
-    # فلترة
-    jobs_news = [n for n in all_news if is_eastern(n) and is_jobs(n)]
-    new_news = [n for n in jobs_news if n['id'] not in sent]
+    print(f"\n📊 إجمالي الأخبار: {len(all_news)}")
     
-    print(f"💼 أخبار وظائف جديدة: {len(new_news)}")
+    # فلترة حسب المنطقة الشرقية
+    eastern_news = []
+    excluded_news = []
+    for n in all_news:
+        if is_eastern(n) and is_jobs(n):
+            eastern_news.append(n)
+        else:
+            excluded_news.append(n)
+    
+    print(f"✅ أخبار المنطقة الشرقية: {len(eastern_news)}")
+    print(f"❌ مستبعد (خارج المنطقة): {len(excluded_news)}")
+    
+    # عرض بعض الأخبار المستبعدة للتوضيح
+    if excluded_news and len(excluded_news) <= 10:
+        print("\n⚠️ أمثلة على الأخبار المستبعدة:")
+        for news in excluded_news[:5]:
+            print(f"  • {news['title'][:80]}...")
+    
+    # فلترة الأخبار الجديدة
+    new_news = [n for n in eastern_news if n['id'] not in sent]
+    
+    print(f"\n💼 أخبار وظائف جديدة: {len(new_news)}")
     
     if new_news:
         message = "💼 *وظائف المنطقة الشرقية*\n" + "━" * 30 + "\n\n"
