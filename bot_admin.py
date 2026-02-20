@@ -79,7 +79,7 @@ MAX_FLOOD_MESSAGES = 5  # 5 رسائل
 FLOOD_TIME_WINDOW = 10  # خلال 10 ثواني
 
 # قيود الرسائل الطويلة والرموز
-MAX_MESSAGE_LENGTH = 500  # أقصى طول للرسالة (عدد الأحرف)
+MAX_MESSAGE_LENGTH = 160  # أقصى طول للرسالة (عدد الأحرف)
 MAX_EMOJI_COUNT = 10  # أقصى عدد للإيموجي/الرموز
 MUTE_DURATION = 3 * 60 * 60  # 3 ساعات بالثواني
 
