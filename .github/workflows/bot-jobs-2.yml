@@ -1,0 +1,39 @@
+name: 💼 بوت أخبار الوظائف 2 (ابو خالد 2)
+
+on:
+  schedule:
+    # كل 12 ساعة: 06:00 و 18:00 UTC (09:00 ص و 09:00 م السعودية)
+    - cron: '0 6,18 * * *'
+  workflow_dispatch:  # للتشغيل اليدوي
+
+jobs:
+  run-bot-2:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run Job Bot 2
+      env:
+        BOT_TOKEN_2: ${{ secrets.BOT_TOKEN_2 }}
+      run: |
+        python bot_jobs_2.py
+    
+    - name: Commit updated sent_jobs_2.json
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add sent_jobs_2.json
+        git diff --quiet && git diff --staged --quiet || git commit -m "💼 تحديث: سجل أخبار الوظائف 2"
+        git push || true
