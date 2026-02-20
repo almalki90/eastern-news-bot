@@ -78,6 +78,11 @@ BANNED_WORDS = [
 MAX_FLOOD_MESSAGES = 5  # 5 رسائل
 FLOOD_TIME_WINDOW = 10  # خلال 10 ثواني
 
+# قيود الرسائل الطويلة والرموز
+MAX_MESSAGE_LENGTH = 500  # أقصى طول للرسالة (عدد الأحرف)
+MAX_EMOJI_COUNT = 10  # أقصى عدد للإيموجي/الرموز
+MUTE_DURATION = 3 * 60 * 60  # 3 ساعات بالثواني
+
 # ============================================================
 # تحميل وحفظ التحذيرات
 # ============================================================
@@ -226,37 +231,67 @@ def check_spam(message):
         delete_message(chat_id, message_id)
         return True
     
-    # 2. فحص الصور - حذف مباشر بدون تحذير
+    # 5. فحص طول الرسالة - حذف + كتم 3 ساعات
+    if len(text) > MAX_MESSAGE_LENGTH:
+        delete_message(chat_id, message_id)
+        # كتم لمدة 3 ساعات
+        mute_until = int(time.time()) + MUTE_DURATION
+        restrict_user(chat_id, user_id, mute_until)
+        send_message(
+            chat_id,
+            f"🚫 تم كتم {message['from'].get('first_name', 'العضو')} لمدة 3 ساعات\n"
+            f"السبب: رسالة طويلة جداً ({len(text)} حرف)"
+        )
+        return True
+    
+    # 6. فحص الرموز والإيموجي - حذف + كتم 3 ساعات
+    # نمط للإيموجي والرموز الخاصة
+    emoji_pattern = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251\u2600-\u26FF\u2700-\u27BF]|[★☆⭐✨💫🌟⚡✅❌⚠️🔥💯👍👎🎯🚀]'
+    emojis = re.findall(emoji_pattern, text)
+    
+    if len(emojis) > MAX_EMOJI_COUNT:
+        delete_message(chat_id, message_id)
+        # كتم لمدة 3 ساعات
+        mute_until = int(time.time()) + MUTE_DURATION
+        restrict_user(chat_id, user_id, mute_until)
+        send_message(
+            chat_id,
+            f"🚫 تم كتم {message['from'].get('first_name', 'العضو')} لمدة 3 ساعات\n"
+            f"السبب: استخدام رموز كثيرة ({len(emojis)} رمز)"
+        )
+        return True
+    
+    # 7. فحص الصور - حذف مباشر بدون تحذير
     if 'photo' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 3. فحص الفيديو - حذف مباشر بدون تحذير
+    # 8. فحص الفيديو - حذف مباشر بدون تحذير
     if 'video' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 4. فحص الصوتيات - حذف مباشر بدون تحذير
+    # 9. فحص الصوتيات - حذف مباشر بدون تحذير
     if 'audio' in message or 'voice' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 5. فحص الملفات - حذف مباشر بدون تحذير
+    # 10. فحص الملفات - حذف مباشر بدون تحذير
     if 'document' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 6. فحص الملصقات - حذف مباشر بدون تحذير
+    # 11. فحص الملصقات - حذف مباشر بدون تحذير
     if 'sticker' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 7. فحص GIF/Animation - حذف مباشر بدون تحذير
+    # 12. فحص GIF/Animation - حذف مباشر بدون تحذير
     if 'animation' in message:
         delete_message(chat_id, message_id)
         return True
     
-    # 8. فحص مقاطع الفيديو الدائرية - حذف مباشر بدون تحذير
+    # 13. فحص مقاطع الفيديو الدائرية - حذف مباشر بدون تحذير
     if 'video_note' in message:
         delete_message(chat_id, message_id)
         return True
