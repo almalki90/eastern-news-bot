@@ -4,9 +4,10 @@
 """
 🤖 بوت إدارة المجموعات - أبو خالد
 الميزات:
-1. الحماية من السبام والروابط
-2. نظام التحذيرات (3 تحذيرات = طرد)
+1. حذف تلقائي للروابط (بدون تحذير)
+2. حذف تلقائي لجميع الملفات (صور، فيديو، صوت، ملفات، ملصقات)
 3. رسالة الترحيب للأعضاء الجدد
+4. السماح بالرسائل النصية فقط
 """
 
 import requests
@@ -167,14 +168,14 @@ def get_updates(offset=None, timeout=30):
         return []
 
 # ============================================================
-# 1️⃣ الحماية من السبام
+# 1️⃣ الحماية من السبام والملفات
 # ============================================================
 
 # سجل الرسائل الأخيرة (للكشف عن Flood)
 user_messages = {}
 
 def check_spam(message):
-    """فحص الرسائل للكشف عن السبام"""
+    """فحص الرسائل للكشف عن السبام والملفات"""
     chat_id = message['chat']['id']
     user_id = message['from']['id']
     message_id = message['message_id']
@@ -183,56 +184,45 @@ def check_spam(message):
     # تجاهل رسائل المشرفين
     # (يمكن تحسينه لاحقاً بفحص صلاحيات المشرف)
     
-    # 1. فحص الروابط
+    # 1. فحص الروابط - حذف مباشر بدون تحذير
     url_pattern = r'(https?://|www\.|\bt\.me/)'
     if re.search(url_pattern, text, re.IGNORECASE):
-        # حذف الرسالة
         delete_message(chat_id, message_id)
-        # تحذير المستخدم
-        add_warning(chat_id, user_id, message['from'].get('first_name', 'العضو'), "نشر روابط")
-        send_message(
-            chat_id,
-            f"⚠️ {message['from'].get('first_name', 'العضو')}: ممنوع نشر الروابط!",
-            reply_to=message_id
-        )
         return True
     
-    # 2. فحص الكلمات الممنوعة
-    for word in BANNED_WORDS:
-        if word in text.lower():
-            delete_message(chat_id, message_id)
-            add_warning(chat_id, user_id, message['from'].get('first_name', 'العضو'), "كلمات ممنوعة")
-            send_message(
-                chat_id,
-                f"⚠️ {message['from'].get('first_name', 'العضو')}: هذا المحتوى غير مسموح!",
-                reply_to=message_id
-            )
-            return True
-    
-    # 3. فحص Flood (تكرار الرسائل)
-    now = time.time()
-    key = f"{chat_id}_{user_id}"
-    
-    if key not in user_messages:
-        user_messages[key] = []
-    
-    # حذف الرسائل القديمة
-    user_messages[key] = [t for t in user_messages[key] if now - t < FLOOD_TIME_WINDOW]
-    
-    # إضافة الرسالة الحالية
-    user_messages[key].append(now)
-    
-    # فحص عدد الرسائل
-    if len(user_messages[key]) > MAX_FLOOD_MESSAGES:
+    # 2. فحص الصور - حذف مباشر بدون تحذير
+    if 'photo' in message:
         delete_message(chat_id, message_id)
-        add_warning(chat_id, user_id, message['from'].get('first_name', 'العضو'), "تكرار الرسائل (Flood)")
-        send_message(
-            chat_id,
-            f"⚠️ {message['from'].get('first_name', 'العضو')}: توقف عن التكرار!",
-            reply_to=message_id
-        )
-        # كتم لمدة 5 دقائق
-        restrict_user(chat_id, user_id, int(time.time()) + 300)
+        return True
+    
+    # 3. فحص الفيديو - حذف مباشر بدون تحذير
+    if 'video' in message:
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 4. فحص الصوتيات - حذف مباشر بدون تحذير
+    if 'audio' in message or 'voice' in message:
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 5. فحص الملفات - حذف مباشر بدون تحذير
+    if 'document' in message:
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 6. فحص الملصقات - حذف مباشر بدون تحذير
+    if 'sticker' in message:
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 7. فحص GIF/Animation - حذف مباشر بدون تحذير
+    if 'animation' in message:
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 8. فحص مقاطع الفيديو الدائرية - حذف مباشر بدون تحذير
+    if 'video_note' in message:
+        delete_message(chat_id, message_id)
         return True
     
     return False
@@ -335,9 +325,11 @@ def process_update(update):
             handle_new_member(message)
             return
         
-        # فحص السبام
-        if 'text' in message or 'caption' in message:
-            check_spam(message)
+        # فحص الروابط والملفات (حذف صامت)
+        if check_spam(message):
+            return
+        
+        # السماح بالرسائل النصية فقط
 
 # ============================================================
 # الحلقة الرئيسية
