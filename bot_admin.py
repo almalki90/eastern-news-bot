@@ -55,8 +55,20 @@ WELCOME_MESSAGE = """
 نتمنى لك وقتاً ممتعاً! 😊
 """
 
-# الكلمات الممنوعة (أضف المزيد حسب الحاجة)
+# الكلمات الممنوعة
 BANNED_WORDS = [
+    # كلمات احتيال
+    "سكليف",
+    "خطابة",
+    "راتب بدون عمل",
+    "متاح سهرات",
+    "جلسات مساج",
+    "مـتاح سـهرات",
+    "جلـسـات مـسـاج",
+    "عقد ايجار موثق",
+    "عقد إيجار موثق",
+    
+    # عامة
     "احتيال",
     "نصب",
     "spam",
@@ -185,7 +197,30 @@ def check_spam(message):
     # تجاهل رسائل المشرفين
     # (يمكن تحسينه لاحقاً بفحص صلاحيات المشرف)
     
-    # 1. فحص اليوزرات (@username) - حذف مباشر بدون تحذير
+    # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx)
+    phone_pattern = r'05\d{8}'
+    if re.search(phone_pattern, text):
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 2. فحص أرقام الجوالات مع رمز الدولة (+9665xxxxxxxx أو 009665xxxxxxxx)
+    phone_pattern_country = r'(\+966|00966)\s*5\d{8}'
+    if re.search(phone_pattern_country, text):
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 3. فحص الكلمات الممنوعة
+    text_lower = text.lower()
+    # إزالة التشكيل والحروف الممطوطة
+    text_clean = re.sub(r'[\u064B-\u065F\u0640\s]+', ' ', text_lower).strip()
+    
+    for word in BANNED_WORDS:
+        word_clean = re.sub(r'[\u064B-\u065F\u0640\s]+', ' ', word.lower()).strip()
+        if word_clean in text_clean:
+            delete_message(chat_id, message_id)
+            return True
+    
+    # 4. فحص اليوزرات (@username) - حذف مباشر بدون تحذير
     username_pattern = r'@\w+'
     if re.search(username_pattern, text):
         delete_message(chat_id, message_id)
