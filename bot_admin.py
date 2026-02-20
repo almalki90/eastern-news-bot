@@ -132,6 +132,23 @@ def delete_message(chat_id, message_id):
     except:
         return False
 
+def is_admin(chat_id, user_id):
+    """التحقق من أن المستخدم مشرف"""
+    try:
+        payload = {
+            'chat_id': chat_id,
+            'user_id': user_id
+        }
+        response = requests.post(f"{API_URL}/getChatMember", json=payload, timeout=10)
+        if response.status_code == 200:
+            result = response.json().get('result', {})
+            status = result.get('status', '')
+            # المشرفون: creator (المالك) أو administrator (مشرف)
+            return status in ['creator', 'administrator']
+        return False
+    except:
+        return False
+
 def ban_user(chat_id, user_id):
     """طرد عضو"""
     try:
@@ -199,8 +216,9 @@ def check_spam(message):
     message_id = message['message_id']
     text = message.get('text', '') or message.get('caption', '')
     
-    # تجاهل رسائل المشرفين
-    # (يمكن تحسينه لاحقاً بفحص صلاحيات المشرف)
+    # ✅ تجاهل رسائل المشرفين تماماً
+    if is_admin(chat_id, user_id):
+        return False  # المشرفون معفيون من جميع القيود
     
     # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx)
     phone_pattern = r'05\d{8}'
