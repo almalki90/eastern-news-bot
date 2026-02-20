@@ -145,6 +145,25 @@ def is_eastern_province(job):
     text = f"{job.get('title', '')} {job.get('summary', '')}".lower()
     return any(k.lower() in text for k in EASTERN_KEYWORDS)
 
+def get_chat_ids():
+    """الحصول على معرفات المجموعات من متغيرات البيئة أو القيم الافتراضية"""
+    # محاولة الحصول على IDs من متغيرات البيئة
+    chat_ids_str = os.environ.get('CHAT_IDS', '')
+    
+    if chat_ids_str:
+        # تحويل النص إلى قائمة أرقام
+        try:
+            return [int(id.strip()) for id in chat_ids_str.split(',') if id.strip()]
+        except:
+            pass
+    
+    # القيم الافتراضية
+    default_ids = [
+        -1003882183490,  # المجموعة الأساسية
+        # -1001234567890,  # مجموعة Dammam2030 (سيتم تحديثه بعد الحصول على ID)
+    ]
+    return default_ids
+
 def send_message(chat_id, message):
     """إرسال رسالة إلى تليجرام"""
     try:
@@ -159,13 +178,32 @@ def send_message(chat_id, message):
     except:
         return False
 
+def send_to_all_chats(message, chat_ids):
+    """إرسال رسالة إلى جميع المجموعات"""
+    success_count = 0
+    failed_chats = []
+    
+    for chat_id in chat_ids:
+        if send_message(chat_id, message):
+            success_count += 1
+            print(f"  ✅ تم الإرسال إلى {chat_id}")
+        else:
+            failed_chats.append(chat_id)
+            print(f"  ❌ فشل الإرسال إلى {chat_id}")
+    
+    return success_count, failed_chats
+
 def main():
     print(f"\n💼 بوت وظائف المنطقة الشرقية - موقع أي وظيفة")
     print(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
     
     sent = load_sent()
-    chat_id = -1003882183490
+    chat_ids = get_chat_ids()
+    
+    print(f"\n📱 المجموعات المستهدفة: {len(chat_ids)}")
+    for chat_id in chat_ids:
+        print(f"  • {chat_id}")
     
     # جلب الوظائف من صفحتين (حوالي 40 وظيفة)
     all_jobs = []
@@ -213,11 +251,18 @@ def main():
                 'sent_at': datetime.now().isoformat()
             }
         
-        if send_message(chat_id, message):
-            print(f"✅ تم إرسال {len(new_jobs[:6])} وظيفة")
+        # إرسال إلى جميع المجموعات
+        print(f"\n📤 إرسال {len(new_jobs[:6])} وظيفة إلى المجموعات...")
+        success_count, failed_chats = send_to_all_chats(message, chat_ids)
+        
+        if success_count > 0:
+            print(f"\n✅ تم الإرسال بنجاح إلى {success_count}/{len(chat_ids)} مجموعة")
             save_sent(sent)
         else:
-            print("❌ فشل الإرسال")
+            print(f"\n❌ فشل الإرسال إلى جميع المجموعات")
+        
+        if failed_chats:
+            print(f"⚠️ فشل الإرسال إلى: {failed_chats}")
     else:
         print("ℹ️ لا توجد وظائف جديدة")
     
