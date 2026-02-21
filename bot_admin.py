@@ -265,13 +265,42 @@ def check_spam(message):
             delete_message(chat_id, message_id)
             return True
     
-    # 4. فحص اليوزرات (@username) - حذف مباشر بدون تحذير
+    # 4. كشف التكرار المشبوه (حرف يتكرر 3+ مرات متتالية)
+    # يكشف: ســـكـــلـــيف، اااااا، 000000
+    repeated_pattern = r'(.)\1{3,}'  # أي حرف يتكرر 4 مرات أو أكثر
+    if re.search(repeated_pattern, text):
+        print(f"   🚫 تكرار مشبوه للأحرف (محاولة تلاعب)")
+        delete_message(chat_id, message_id)
+        return True
+    
+    # كشف حرف التطويل (ـ) الزائد (3+ مرات في الرسالة)
+    tatweel_count = text.count('\u0640')
+    if tatweel_count >= 3:
+        print(f"   🚫 تطويل زائد ({tatweel_count} مرات) - محاولة تلاعب")
+        delete_message(chat_id, message_id)
+        return True
+    
+    # 5. كشف نسبة الرموز إلى النص (إذا الرموز > 30%)
+    # الرموز: أي شيء ليس حرف أو مسافة (أرقام، إيموجي، علامات)
+    text_length = len(text)
+    if text_length > 0:
+        # حساب عدد الأحرف العادية فقط (عربي + مسافة)
+        normal_chars = re.findall(r'[\u0621-\u064A\s]', text)
+        normal_ratio = len(normal_chars) / text_length
+        
+        # إذا الأحرف العادية أقل من 70% (أي الرموز أكثر من 30%)
+        if normal_ratio < 0.7:
+            print(f"   🚫 نسبة رموز عالية ({int((1-normal_ratio)*100)}%) - رسالة مشبوهة")
+            delete_message(chat_id, message_id)
+            return True
+    
+    # 6. فحص اليوزرات (@username) - حذف مباشر بدون تحذير
     username_pattern = r'@\w+'
     if re.search(username_pattern, text):
         delete_message(chat_id, message_id)
         return True
     
-    # 5. فحص طول الرسالة - حذف + كتم 3 ساعات (صامت)
+    # 7. فحص طول الرسالة - حذف + كتم 3 ساعات (صامت)
     if len(text) > MAX_MESSAGE_LENGTH:
         delete_message(chat_id, message_id)
         # كتم لمدة 3 ساعات بدون إرسال رسالة
