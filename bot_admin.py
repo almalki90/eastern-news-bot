@@ -262,17 +262,13 @@ def check_spam(message):
         delete_message(chat_id, message_id)
         return True
     
-    # 5. فحص طول الرسالة - حذف + كتم 3 ساعات
+    # 5. فحص طول الرسالة - حذف + كتم 3 ساعات (صامت)
     if len(text) > MAX_MESSAGE_LENGTH:
         delete_message(chat_id, message_id)
-        # كتم لمدة 3 ساعات
+        # كتم لمدة 3 ساعات بدون إرسال رسالة
         mute_until = int(time.time()) + MUTE_DURATION
         restrict_user(chat_id, user_id, mute_until)
-        send_message(
-            chat_id,
-            f"🚫 تم كتم {message['from'].get('first_name', 'العضو')} لمدة 3 ساعات\n"
-            f"السبب: رسالة طويلة جداً ({len(text)} حرف)"
-        )
+        print(f"   🚫 رسالة طويلة ({len(text)} حرف) - تم الحذف والكتم صامتاً")
         return True
     
     # 6. فحص الرموز والإيموجي - حذف + كتم 3 ساعات
@@ -282,14 +278,10 @@ def check_spam(message):
     
     if len(emojis) > MAX_EMOJI_COUNT:
         delete_message(chat_id, message_id)
-        # كتم لمدة 3 ساعات
+        # كتم لمدة 3 ساعات بدون إرسال رسالة
         mute_until = int(time.time()) + MUTE_DURATION
         restrict_user(chat_id, user_id, mute_until)
-        send_message(
-            chat_id,
-            f"🚫 تم كتم {message['from'].get('first_name', 'العضو')} لمدة 3 ساعات\n"
-            f"السبب: استخدام رموز كثيرة ({len(emojis)} رمز)"
-        )
+        print(f"   🚫 رموز كثيرة ({len(emojis)} رمز) - تم الحذف والكتم صامتاً")
         return True
     
     # 7. فحص الصور - حذف مباشر بدون تحذير
