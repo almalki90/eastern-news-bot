@@ -220,14 +220,16 @@ def check_spam(message):
     if is_admin(chat_id, user_id):
         return False  # المشرفون معفيون من جميع القيود
     
-    # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx)
-    phone_pattern = r'05\d{8}'
+    # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx أو مع مسافات)
+    # يكتشف: 0501234567 أو 05 0 1 2 3 4 5 6 7 أو 05 012 345 67
+    phone_pattern = r'0\s*5[\s\d]{8,}'
     if re.search(phone_pattern, text):
         delete_message(chat_id, message_id)
         return True
     
     # 2. فحص أرقام الجوالات مع رمز الدولة (+9665xxxxxxxx أو 009665xxxxxxxx)
-    phone_pattern_country = r'(\+966|00966)\s*5\d{8}'
+    # يكتشف +966 مع مسافات أيضاً: +966 5 8 0 1 0 7 2 8 0 أو +966580107280
+    phone_pattern_country = r'(\+966|00966)\s*\d[\s\d]{8,}'
     if re.search(phone_pattern_country, text):
         delete_message(chat_id, message_id)
         return True
