@@ -29,8 +29,7 @@ WARNINGS_FILE = "warnings.json"
 
 # المجموعات المستهدفة
 TARGET_GROUPS = [
-    -1003882183490,  # المجموعة الأساسية
-    -1001660050244,  # مجموعة Dammam2030
+    -1001660050244,  # مجموعة أهالي المنطقة الشرقية (Dammam2030)
 ]
 
 # ============================================================
@@ -215,15 +214,25 @@ def check_spam(message):
     user_id = message['from']['id']
     message_id = message['message_id']
     text = message.get('text', '') or message.get('caption', '')
+    user_name = message.get('from', {}).get('first_name', 'Unknown')
     
-    # ⚠️ المشرفون خاضعون للقيود أيضاً (لضمان نظافة المجموعة)
-    # if is_admin(chat_id, user_id):
-    #     return False  # تم تعطيل استثناء المشرفين
+    # طباعة الرسالة للتشخيص
+    print(f"\n📩 رسالة جديدة من {user_name} (ID: {user_id})")
+    print(f"   النص: {text[:100]}...")
+    
+    # ✅ تجاهل رسائل المشرفين تماماً
+    is_user_admin = is_admin(chat_id, user_id)
+    print(f"   مشرف؟ {is_user_admin}")
+    
+    if is_user_admin:
+        print(f"   ✅ تم تجاهل رسالة المشرف")
+        return False  # المشرفون معفيون من جميع القيود
     
     # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx أو مع مسافات)
     # يكتشف: 0501234567 أو 05 0 1 2 3 4 5 6 7 أو 05 012 345 67
     phone_pattern = r'0\s*5[\s\d]{8,}'
     if re.search(phone_pattern, text):
+        print(f"   🚫 اكتُشف رقم جوال (05...)")
         delete_message(chat_id, message_id)
         return True
     
@@ -231,6 +240,7 @@ def check_spam(message):
     # يكتشف +966 مع مسافات أيضاً: +966 5 8 0 1 0 7 2 8 0 أو +966580107280
     phone_pattern_country = r'(\+966|00966)\s*\d[\s\d]{8,}'
     if re.search(phone_pattern_country, text):
+        print(f"   🚫 اكتُشف رقم جوال (+966...)")
         delete_message(chat_id, message_id)
         return True
     
@@ -242,6 +252,7 @@ def check_spam(message):
     for word in BANNED_WORDS:
         word_clean = re.sub(r'[\u064B-\u065F\u0640\s]+', ' ', word.lower()).strip()
         if word_clean in text_clean:
+            print(f"   🚫 اكتُشفت كلمة محظورة: {word}")
             delete_message(chat_id, message_id)
             return True
     
@@ -407,8 +418,11 @@ def process_update(update):
         message = update['message']
         chat_id = message['chat']['id']
         
+        print(f"\n📥 تحديث جديد من مجموعة: {chat_id}")
+        
         # تجاهل الرسائل من غير المجموعات المستهدفة
         if chat_id not in TARGET_GROUPS:
+            print(f"   ⏭️ تم تجاهل الرسالة (ليست من المجموعات المستهدفة)")
             return
         
         # التعامل مع الأعضاء الجدد
