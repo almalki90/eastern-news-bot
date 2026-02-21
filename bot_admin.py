@@ -239,16 +239,18 @@ def check_spam(message):
     # البحث عن نمط 05xxxxxxxx (10 أرقام تبدأ بـ 05)
     phone_pattern = r'05\d{8}'
     if re.search(phone_pattern, numbers_only):
-        print(f"   🚫 اكتُشف رقم جوال (05...): {numbers_only[:10]}")
+        print(f"   🚫 اكتُشف رقم جوال (05...): {numbers_only[:10]} - حظر المرسل")
         delete_message(chat_id, message_id)
+        ban_user(chat_id, user_id)  # حظر نهائي
         return True
     
     # 2. فحص أرقام الجوالات مع رمز الدولة (+966 أو 00966)
     # يكشف: +966598746619، +٩٦٦٥٩٨٧٤٦٦١٩، 00966598746619
     phone_pattern_country = r'(966|00966)\d{9}'
     if re.search(phone_pattern_country, numbers_only):
-        print(f"   🚫 اكتُشف رقم جوال (+966...)")
+        print(f"   🚫 اكتُشف رقم جوال (+966...) - حظر المرسل")
         delete_message(chat_id, message_id)
+        ban_user(chat_id, user_id)  # حظر نهائي
         return True
     
     # 3. فحص الكلمات الممنوعة (مع كشف التلاعب)
@@ -261,8 +263,9 @@ def check_spam(message):
     for word in BANNED_WORDS:
         word_clean = re.sub(r'[\u064B-\u065F\u0640\s\d\W_]+', '', word.lower())
         if word_clean in text_clean:
-            print(f"   🚫 اكتُشفت كلمة محظورة: {word} (في النص: {text[:50]}...)")
+            print(f"   🚫 اكتُشفت كلمة محظورة: {word} - حظر المرسل")
             delete_message(chat_id, message_id)
+            ban_user(chat_id, user_id)  # حظر نهائي
             return True
     
     # 4. كشف التكرار المشبوه (حرف يتكرر 3+ مرات متتالية)
