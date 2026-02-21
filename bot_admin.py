@@ -216,9 +216,9 @@ def check_spam(message):
     message_id = message['message_id']
     text = message.get('text', '') or message.get('caption', '')
     
-    # ✅ تجاهل رسائل المشرفين تماماً
-    if is_admin(chat_id, user_id):
-        return False  # المشرفون معفيون من جميع القيود
+    # ⚠️ المشرفون خاضعون للقيود أيضاً (لضمان نظافة المجموعة)
+    # if is_admin(chat_id, user_id):
+    #     return False  # تم تعطيل استثناء المشرفين
     
     # 1. فحص أرقام الجوالات السعودية (05xxxxxxxx أو مع مسافات)
     # يكتشف: 0501234567 أو 05 0 1 2 3 4 5 6 7 أو 05 012 345 67
