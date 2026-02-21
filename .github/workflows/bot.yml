@@ -1,0 +1,41 @@
+name: Telegram Admin Bot 24/7
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # يعمل كل 5 دقائق لضمان عدم التوقف
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 ساعات
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install requests
+    
+    - name: Run Telegram Bot
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      run: |
+        echo "🚀 تشغيل البوت..."
+        python3 bot_admin.py &
+        BOT_PID=$!
+        
+        # إبقاء البوت يعمل لمدة 5 دقائق ثم يُعاد تشغيله
+        sleep 300
+        
+        echo "✅ البوت عمل لمدة 5 دقائق، سيُعاد تشغيله تلقائياً"
+        kill $BOT_PID 2>/dev/null || true
